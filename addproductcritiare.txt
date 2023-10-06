@@ -1,0 +1,550 @@
+<!DOCTYPE composition PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:s="http://jboss.com/products/seam/taglib"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:a="http://richfaces.org/a4j"
+	xmlns:rich="http://richfaces.org/rich">
+	<style type="text/css">
+#criteriaAddNewProduct\:div_radio #criteriaAddNewProduct\:sel_radio\:0 {
+	vertical-align: middle;
+	margin: 0px;
+	margin-right: 2px;
+}
+
+#criteriaAddNewProduct\:tableProductSelected_GridHeaderTemplate {
+	z-index: 1;
+}
+
+#criteriaAddNewProduct\:div_radio #criteriaAddNewProduct\:sel_radio\:1 {
+	vertical-align: middle;
+	margin: 0px;
+	margin-right: 2px;
+	margin-left: 20px;
+}
+
+.sidebar-nav {
+	width: 1030px !important;
+}
+
+#sidebar-wrapper.active {
+	width: 1050px !important;
+	height: 500px !important;
+}
+
+#criteriaAddNewProduct\:menu-toggle {
+	top: 0;
+	left: 0;
+	position: fixed;
+	z-index: 1;
+}
+
+.textstyle {
+	text-align: right;
+}
+
+.rich-inplace-field:focus {
+	position: relative;
+}
+
+#criteriaAddNewProduct\:tableProductSelected .rich-sdt-column-cell .dr-sdt-cbody
+	{
+	font-family: 'Open Sans', san serif;
+	height: #{processHome.checkDisplayField('quotes', 'editor')?130:32
+}
+
+px;
+margin-top:5px;
+white-space:normal;
+}
+.numstyle {
+	text-align: center;
+}
+
+.content-right {
+	text-align: right;
+	margin: 0 0 10px;
+}
+
+.content-right .control-label {
+	color: #888;
+	margin-right: 10px;
+	font-weight: normal;
+}
+
+.crm-body .rich-modalpanel .rich-mpnl-body {
+	overflow: hidden;
+}
+
+.crm-body textarea, .crm-body select, .crm-body input[type="text"] {
+	width: 100%;
+}
+
+.dr-sdt-hsep.rich-sdt-hsep {
+	display: none;
+}
+
+.crm-body .box-table table {
+	min-width: auto;
+}
+</style>
+	<script type="text/javascript">
+			//<![CDATA[
+			$js(document).ready(function () {
+				$j('#criteriaAddNewProduct\\:tableProductSelected').click(function (e) {
+					$j(e.target).children('span').click();
+				});
+
+				//when press enter -> add products with click hidden link
+				$j('#criteriaAddNewProduct').bind('keypress', function (e) {
+					var keyCode = e.keyCode || e.which;
+					if (keyCode === 13 && e.target.nodeName.toLowerCase() != 'textarea') {
+						console.log(e.target);
+						if (e.target.name == "criteriaAddNewProduct:productCode") {
+							$j('#criteriaAddNewProduct\\:addProductLink').click();
+						}
+						else if (e.target.name.indexOf("criteriaAddNewProduct:tableProductSelected") > -1) {
+							var search = $j('#criteriaAddNewProduct\\:productCode');
+							search.val('');
+							search.focus();
+						}
+						e.preventDefault();
+						return false;
+					}
+				});
+
+				$j('#criteriaAddNewProduct\\:productCode').click(function () {
+					$j(this).prop('selectionStart', 0);
+					$j(this).prop('selectionEnd', $j(this).val().length);
+				});
+
+				var inputs = $j('#criteriaAddNewProduct table input[type="text"]');
+				inputs.click(function () {
+					$j(this).prop('selectionStart', 0);
+					$j(this).prop('selectionEnd', $j(this).val().length);
+				});
+
+				if(localStorage.getItem("optionSearch") != null){
+					$j('#criteriaAddNewProduct\\:optionSearch').val(localStorage.getItem("optionSearch"));
+					$j('#criteriaAddNewProduct\\:optionSearchType').val(localStorage.getItem("optionSearch"));
+					$j('#criteriaAddNewProduct\\:optionSearchType').click();
+				}
+
+			});
+
+			function setStorage(){
+				if($j('#criteriaAddNewProduct\\:optionSearch').val() != null){
+					localStorage.setItem("optionSearch", $j('#criteriaAddNewProduct\\:optionSearch').val());
+				}
+			}
+
+			//scroll page -> reset position popup products
+			$js(document).scroll(function () {
+				var search = $j('#criteriaAddNewProduct\\:productCode');
+				var offset = search.offset();
+				var box = $j('#criteriaAddNewProduct\\:selectProductPanel');
+				box.offset({ top: offset.top + 30});
+			});
+
+			//selectItem is index product selected in list products
+			var selectItem = 0;
+			function getSelectItem() {
+				return selectItem;
+			}
+
+			//show product popup after search
+			function showSelectProduct() {
+				var search = $j('#criteriaAddNewProduct\\:productCode');
+				var offset = search.offset();
+				var box = $j('#criteriaAddNewProduct\\:selectProductPanel');
+				$j('#criteriaAddNewProduct\\:productSearchPanel').append(box);
+				box.show();
+				box.offset({ top: offset.top + 30});
+
+				selectItem = 0;
+				$j('#criteriaAddNewProduct\\:productListSearch tbody tr:first').css('background-color', '#ddd');
+			}
+
+			//Display selected product when press up, down key
+			function changeSelect(e) {
+				var numberRow = $j('#criteriaAddNewProduct\\:productListSearch tbody tr').length;
+				if (e.keyCode == 40 && selectItem < numberRow - 1) {
+					selectItem = selectItem + 1;
+				}
+				else if (e.keyCode == 38 && selectItem > 0) {
+					selectItem = selectItem - 1;
+				}
+				$j('#criteriaAddNewProduct\\:productListSearch tbody tr').each(function (index, value) {
+					if (index == selectItem) {
+						$j(this).css('background-color', '#ddd');
+						if (index > 3) {
+							$j('#criteriaAddNewProduct\\:selectProductPanel').scrollTop((index - 3) * 37);
+						}
+						else if (e.keyCode == 38) {
+							$j('#criteriaAddNewProduct\\:selectProductPanel').scrollTop(0);
+						}
+					}
+					else {
+						$j(this).css('background-color', '#fff');
+					}
+				});
+			}
+
+			//check keypress is up or down or not
+			function checkUpDown(e) {
+				if (e.keyCode == 38 || e.keyCode == 40 || e.keyCode == 13)
+					return true;
+				return false;
+			}
+
+			//hide product popup
+			function hideSelectProduct() {
+				selectItem = -1;
+				var box = $j('#criteriaAddNewProduct\\:selectProductPanel');
+				box.hide();
+			}
+
+			//when add product, focus to quantity of product
+			function focusQuantity() {
+				var txtQuantity = $j('input[id$="quantity"]').first();
+				txtQuantity.prop('selectionStart', 0);
+				txtQuantity.prop('selectionEnd', txtQuantity.val().length);
+				txtQuantity.focus();
+
+				var inputs = $j('#criteriaAddNewProduct table input[type="text"]');
+				inputs.click(function () {
+					$j(this).prop('selectionStart', 0);
+					$j(this).prop('selectionEnd', $j(this).val().length);
+				});
+
+				$j('#criteriaAddNewProduct\\:tableProductSelected').click(function (e) {
+					$j(e.target).children('span').click();
+				});
+
+				//Fix table
+				$j("span[id$='body\\:NormalBox'").css("width", "");
+				setTimeout(function () {
+					$j("span[id$='body\\:NormalBox'").css("width", "2000px");
+				}, 100);
+			}
+
+			function moreProduct(data) {
+				console.log(data);
+			}
+
+			//Click outcome textbox search then hide popup product
+			$j('body').click(function (event) {
+				if (!$j(event.target).closest('#criteriaAddNewProduct\\:selectProductPanel').length && !$j(event.target).closest('#criteriaAddNewProduct\\:productCode').length) {
+					$j('#criteriaAddNewProduct\\:selectProductPanel').hide();
+				};
+			});
+
+			var a = true;
+			//function to submit 2 forms or more
+			function myFunction() {
+				if (a == true) {
+					//Fix product description not save
+					$j('iframe[id$="editorTextArea_ifr"]').each(function () {
+						var frameId = $j(this)[0].id;
+						var value = $j(this)[0].contentDocument.documentElement.getElementsByTagName('body')[0].innerHTML;
+						var textArea = frameId.replace('editorTextArea_ifr', 'editorTextArea').replace(/:/g, '\\:');;
+						$j('#' + textArea).text(value);
+					});
+				}
+				a = false;
+			}
+		//]]>
+		</script>
+	<h:form>
+	<a:jsFunction name="getProductNote" ajaxSingle="true"
+				action="#{targetsHome.changeNoteTarget()}"
+				reRender="listProductSelected" >
+			</a:jsFunction>
+	</h:form>
+	<rich:modalPanel id="addProductCriteriaTarget"
+		showWhenRendered="#{targetsHome.showWhenRender}" width="1000"
+		height="650"
+		onmaskclick="#{rich:component('addProductCriteriaTarget')}.hide();">
+		<f:facet name="controls">
+			<h:panelGroup id="hideProductPanel" styleClass="header-group">
+				<span style="padding-left: 15px">#{msgKPI.create_criteria}</span>
+				<h:graphicImage value="/img/close.png" style="cursor:pointer"
+					id="imgHideProductConfirmation4"
+					onclick="#{rich:component('addProductCriteriaTarget')}.hide();" />
+			</h:panelGroup>
+		</f:facet>
+		<h:form id="criteriaAddNewProduct">
+			<rich:messages styleClass="messages" style="color: red;" />
+			<s:div styleClass="box">
+				<s:div styleClass="box-content">
+					<s:div styleClass="container-fluid">
+
+						<s:div styleClass="row" id="formAdd">
+							<s:div styleClass="form-horizontal">
+								<s:div styleClass="form-group">
+									<s:label styleClass="col-sm-3" value="#{msgKPI.criteria}" />
+									<s:div styleClass="col-sm-4">
+										<h:selectOneListbox id="btnTargetType"
+											value="#{targetsHome.targets.targetType}" size="1"
+											styleClass="form-control">
+											<f:selectItem itemLabel="#{msgProducts.product}"
+												itemValue="22" />
+											<a:support ajaxSingle="true" event="onchange"
+												actionListener="#{targetsHome.clearValue}"
+												action="#{targetsHome.changeNoteTarget()}"
+												reRender="formAdd,notes" />
+										</h:selectOneListbox>
+									</s:div>
+								</s:div>
+								<s:div styleClass="row"
+									style="padding-bottom: 10px;"
+									id="productSearchPanel">
+
+									<s:div styleClass="col-sm-3">
+										<s:label>#{msgCommon.search} #{msgProducts.products} </s:label>
+									</s:div>
+									<s:div styleClass="col-sm-4">
+										<h:inputText value="#{productsList.searchType}"
+											id="optionSearchType" style="display: none;">
+											<a:support event="onclick" ajaxSingle="true"
+												action="#{productsList.getSearchType()}" />
+										</h:inputText>
+										<h:selectOneListbox id="optionSearch"
+											styleClass="form-control" value="#{productsList.searchType}"
+											size="1">
+											<f:selectItem itemLabel="#{msgProducts.contains}"
+												itemValue="2" />
+											<f:selectItem itemLabel="#{msgProducts.start_with}"
+												itemValue="1" />
+											<f:selectItem itemLabel="#{msgProducts.equal}" itemValue="3" />
+											<f:selectItem itemLabel="#{msgProducts.keyword}"
+												itemValue="4" />
+											<a:support event="onchange" ajaxSingle="true"
+												onchange="setStorage()" />
+										</h:selectOneListbox>
+									</s:div>
+									<s:div styleClass="col-sm-5">
+										<s:div styleClass="input-group">
+											<h:inputText id="productCode" styleClass="form-control"
+												value="#{productsList.search}">
+												<a:support event="onkeyup" ajaxSingle="true"
+													onsubmit="if(checkUpDown(event)) { changeSelect(event); return false;}"
+													action="#{productsList.searchProductSingle}"
+													reRender="productListSearch"
+													oncomplete="showSelectProduct();" />
+											</h:inputText>
+											<s:span id="span" styleClass="input-group-addon">
+												<i class="glyphicon-search"></i>
+											</s:span>
+										</s:div>
+									</s:div>
+
+
+								</s:div>
+								
+
+								<rich:dataTable value="#{targetsHome.listProductTarget}"
+									var="_target" id="listProductSelected" rows="7"
+									styleClass="table table-hover table-nomargin table-bordered">
+									<rich:column  styleClass="w-80" style="width: 50px">
+										<f:facet name="header">
+											<h:outputText value="#{msgQuotes.delete}" />
+										</f:facet>
+										<a:commandLink ajaxSingle="true" id="deletelink"
+											reRender="deletePanel"
+											oncomplete="#{rich:component('deleteProductPanel')}.show()">
+											<h:graphicImage value="../img/delete_icon.png"
+												style="border:0" />
+											<f:setPropertyActionListener value="#{_target}"
+												target="#{targetsHome.productTargets}" />
+										</a:commandLink>
+										<rich:toolTip for="deletelink" value="#{msgQuotes.delete}" />
+									</rich:column>
+									<rich:column styleClass="w-120">
+										<f:facet name="header">
+											<h:outputText value="#{msgProducts.product_name}" />
+										</f:facet>
+										<h:outputText id="productName"
+											value="#{_target.products.productNameText}" />
+									</rich:column>
+									<rich:column styleClass="w-120">
+										<f:facet name="header">
+											<h:outputText value="#{msgCommon.type}" />
+										</f:facet>
+										<h:selectOneListbox id="choiceType" styleClass="form-control" style="width: 120px"
+											value="#{_target.number}" size="1">
+											<f:selectItem itemLabel="#{msgKPI.number}" itemValue="2" />
+											<f:selectItem itemLabel="#{msgKPI.revenue}" itemValue="1" />
+											
+										</h:selectOneListbox>
+									</rich:column>
+									<rich:column id="productTarget" styleClass="w-50" style="width: 200px">
+										<f:facet name="header">
+											<h:outputText value="#{msgKPI.target}" />
+										</f:facet>
+										<s:div>
+											<s:div styleClass="input-group">
+												<h:inputText id="txtValue" styleClass="form-control"
+													style="weight: 70px;text-align:right;"
+													onkeypress="if(event.which &lt; 48 || event.which &gt; 57) return false;"
+													value="#{_target.value}">
+													<a:support ajaxSingle="true" reRender="revenueInput"
+														event="onkeyup" />
+												</h:inputText>
+												<s:div styleClass="input-group-addon"
+													style="background: #bbbbbb;">
+													<s:span>
+														<h:outputText id="revenueInput"
+															style="color : red ; text-align: right;"
+															value="#{_target.revenue}">
+															<f:convertNumber pattern="#,###.##" />
+														</h:outputText>
+													</s:span>
+												</s:div>
+											</s:div>
+										</s:div>
+										
+									</rich:column>
+									<rich:column styleClass="w-100" style="width: 120px">
+										<f:facet name="header">
+											<h:outputText value="#{msgKPI.user_apply}" />
+										</f:facet>
+										<s:div >
+											<h:selectOneListbox id="btnUserType"
+												styleClass="form-control" value="#{_target.userType}"
+												size="1">
+												<f:selectItem itemLabel="#{msgKPI.contracts}" itemValue="1" />
+												<f:selectItem itemLabel="#{msgKPI.orders}" itemValue="2" />
+												<f:selectItem itemLabel="#{msgKPI.quote}" itemValue="3" />
+												<a:support event="onchange"
+													actionListener="#{targetsHome.changeNoteTarget()}"
+													reRender="notes" ajaxSingle="true" />
+											</h:selectOneListbox>
+										</s:div>
+									</rich:column>
+									<rich:column id="notes" styleClass="w-50">
+										<f:facet name="header">
+											<h:outputText value="#{msgKPI.note}" />
+										</f:facet>
+										<h:inputTextarea id="txtNote"
+											value="#{_target.note}" rows="1"
+											styleClass="form-control"  />
+									</rich:column>
+									
+									
+								</rich:dataTable>
+							</s:div>
+						</s:div>
+						<s:div styleClass="row" id="button"
+							style="float:right;padding-right:0px">
+							<a:commandButton id="save" value="#{msgCommon.persist}"
+								action="#{targetsHome.addNewObjectType}"
+								styleClass="btn btn-small btn-primary"
+								reRender="listCriteriaTarget, addProductCriteriaTarget "
+								oncomplete="myFunction();">
+							</a:commandButton>
+							<a:commandButton id="Cancel" value="#{msgCommon.ignore}"
+								styleClass="btn btn-small"
+								oncomplete="#{rich:component('addProductCriteriaTarget')}.hide();"
+								immediate="true" reRender="tableCustomers, warrantyCustomer">
+							</a:commandButton>
+						</s:div>
+					</s:div>
+				</s:div>
+			</s:div>
+
+			<s:div id="selectProductPanel"
+				style="border-radius: 3px; width:56%; display:none; z-index: 100; position: absolute;right: 0;
+						background-color: white; overflow-y: hidden; max-height: 350px;  border: solid 1px #ddd;">
+
+				<s:div styleClass="box-table"
+					style="overflow-y: scroll;max-height: 270px;">
+					<rich:dataTable
+						styleClass="table table-hover table-nomargin table-bordered"
+						value="#{productsList.listProducts}" id="productListSearch"
+						var="product">
+						<rich:column>
+							<f:facet name="header">
+								<h:outputText value="#{msgProducts.product_code}" />
+							</f:facet>
+							<h:outputText id="productCode" value="#{product.productCode}" />
+						</rich:column>
+						<rich:column>
+							<f:facet name="header">
+								<h:outputText value="#{msgProducts.product_name}" />
+							</f:facet>
+							<h:outputText id="productName" value="#{product.productName}"
+								escape="false" />
+						</rich:column>
+						<rich:column>
+							<f:facet name="header">
+								<h:outputText value="#{msgContracts.price}" />
+							</f:facet>
+							<h:outputText id="priceOut" value="#{product.priceOut}">
+								<f:convertNumber pattern="#,###.##" />
+							</h:outputText>
+						</rich:column>
+						<rich:column>
+							<f:facet name="header">
+								<h:outputText value="#{msgProducts.manufacturer}" />
+							</f:facet>
+							<h:outputText id="productManufactory"
+								value="#{product.productManufactory}" />
+						</rich:column>
+						<rich:column>
+							<f:facet name="header">
+								<h:outputText value="#{msgProducts.product_unit}" />
+							</f:facet>
+							<h:outputText id="productUnit"
+								value="#{viewProductWarehouseProductList.sendUnitName(product.unitId)}">
+							</h:outputText>
+						</rich:column>
+						<a:support id="renderMoneyForecast" event="onRowClick"
+							actionListener="#{targetsHome.selectProduct(product)}"
+							reRender="listProductSelected,notes" onsubmit="hideSelectProduct()"
+							oncomplete="getProductNote();" />
+					</rich:dataTable>
+				</s:div>
+				<s:div styleClass="col-sm-12"
+					style="text-align:center;border:1px solid #ddddddb3;">
+					<a:commandLink value="Xem thêm" ajaxSingle="true"
+						action="#{productsList.searchProductSingleMore}"
+						reRender="productListSearch" />
+				</s:div>
+			</s:div>
+
+
+			<rich:modalPanel id="deleteProductPanel" height="350" width="450">
+				<f:facet name="controls">
+					<h:panelGroup id="hidelink2" styleClass="header-group">
+						<span style="padding-left: 15px"><i class="fa fa-trash-o"></i>
+							#{msgCommon.delete}</span>
+						<h:graphicImage value="/img/close.png" styleClass="hidelink"
+							style="cursor:pointer;" />
+						<rich:componentControl for="deletePanel" attachTo="hidelink2"
+							operation="hide" event="onclick" />
+					</h:panelGroup>
+				</f:facet>
+				<s:div styleClass="col-sm-12">
+					<h4>
+						<h:outputText value="#{msgKPI.delete_criteria} ?"
+							style="padding-right:20px;" />
+					</h4>
+					<div style="text-align: right; padding-top: 40px;">
+						<a:commandButton id="btnRemoveCriteriaTarget"
+							value="#{msgCommon.yes}" ajaxSingle="true"
+							styleClass="btn btn-danger btn-small"
+							action="#{targetsHome.deleteProductTarget}"
+							oncomplete="#{rich:component('deleteProductPanel')}.hide();"
+							reRender="listProductSelected" />
+						<a:commandButton id="btnNo" value="#{msgCommon.no}"
+							styleClass="btn btn-small"
+							onclick="#{rich:component('deleteProductPanel')}.hide();return false;" />
+					</div>
+				</s:div>
+			</rich:modalPanel>
+		</h:form>
+	</rich:modalPanel>
+</ui:composition>
